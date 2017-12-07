@@ -19,12 +19,12 @@ const data = x => {
     .map(x => x.trim())
     .map(x => x.split(' '))
     .map(x => x[3])
-  return temperature
-};
+  return temperature[temperature.length - 1]
+}
 
 const weatherData = async (place, param) => await fetch(weatherUrl(place, param))
   .then(res => res.text())
   .then(x => xml2json(x))
   .then(x => data(x))
 
-export default weatherData;
+export default weatherData
