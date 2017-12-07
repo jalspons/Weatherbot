@@ -17,8 +17,7 @@ const parseMessage = (place, parameters) => {
     .then( data => {
       message += `${p}: ${data}`;
       console.log(`${p}: ${data}`);
-    }) // ***************************
-    .catch( err => console.log(err))
+    }).catch( err => { console.log(err) })
   });
   return message; // Palauttaa atm vaan tuon määrittelylauseen, Promiset jäävät hakematta/toteutumatta
 };
