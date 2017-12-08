@@ -4,7 +4,7 @@
   "description": "weatherbot",
   "main": "bot.js",
   "scripts": {
-    "start": "babel-node bot.js"
+    "start": "nodemon bot.js --exec babel-node -e js"
   },
   "author": "Jani Saranpää",
   "license": "ISC",

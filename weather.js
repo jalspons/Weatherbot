@@ -1,30 +1,44 @@
-import fetch                from 'node-fetch'
-import { parseString }      from 'xml2js'
-import { apiKey, baseUrl }  from './reference.json'
+import fetch                             from 'node-fetch'
+import { parseString }                   from 'xml2js'
+import { apiKey, baseUrl, observation }  from './reference.json'
 
-const weatherUrl = (place, param) => `${baseUrl}/${apiKey}/wfs?request=getFeature&storedquery_id=fmi::observations::weather::daily::multipointcoverage&place=${place}&parameters=${param}`
+// Generating url and parsing XML and JSON
+const weatherUrl = (place, param, type) => `${baseUrl}/${apiKey}/wfs?request=getFeature&storedquery_id=${type}&place=${place}&parameters=${param}`
 const xml2json   = async xml => new Promise((resolve, reject) => parseString(xml, (e, j) => e ? reject(e) : resolve(j)))
-
 const data = x => {
-  const root        = x['wfs:FeatureCollection']
-  const timestamp   = root['$']['timeStamp']
-  const result      = root['wfs:member'][0]['omso:GridSeriesObservation'][0]['om:result'][0]['gmlcov:MultiPointCoverage'][0]
-  const temperature = result['gml:rangeSet'][0]['gml:DataBlock'][0]['gml:doubleOrNilReasonTupleList'][0]
-    .trim()
-    .split('\n')
-    .map(x => x.trim())
-  const date        = result['gml:domainSet'][0]['gmlcov:SimpleMultiPoint'][0]['gmlcov:positions'][0]
-    .trim()
-    .split('\n')
-    .map(x => x.trim())
-    .map(x => x.split(' '))
-    .map(x => x[3])
-  return temperature[temperature.length - 1]
+  const root   = x['wfs:FeatureCollection']['wfs:member'][0]['omso:PointTimeSeriesObservation'][0]
+  const result = root['om:result'][0]['wml2:MeasurementTimeseries'][0]['wml2:point']
+    .map( x => x['wml2:MeasurementTVP'][0])
+    .map(x => [ x['wml2:time'][0], x['wml2:value'][0] ])
+  return result[result.length - 1][1]
 }
 
-const weatherData = async (place, param) => await fetch(weatherUrl(place, param))
+// Fetching data from database
+const weatherData = async (place, param, type) => await fetch(weatherUrl(place, param, type))
   .then(res => res.text())
   .then(x => xml2json(x))
   .then(x => data(x))
 
-export default weatherData
+// command /sää parameters for the url 
+const t = {
+    lämpötila: 'tday',
+    lumi: 'snow',
+    sade: 'rrday'
+}
+
+// Generates string for for the response post
+const parseWeatherMessage = async (place, parameters) => {
+    try {
+      let message = `Tänään sää ${place}:\n`
+      const data = await Promise.all(parameters.map(async (e) => await weatherData(place, t[e], observation)))
+      data.forEach( y => message += `${parameters[data.indexOf(y)]}: ${y}\n`)
+      return message
+    }
+    catch (e) {
+      console.log(e)
+      return "Did you use proper parameters O_o?\nSee </help saa> for more information :)"
+    }
+  }
+
+// Export the function for other .js file use
+export default parseWeatherMessage
